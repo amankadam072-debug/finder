@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Product Website Finder (₹)</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for a premium look */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Poppins:wght@500;700&display=swap');
+
+        :root {
+            --primary-500: #0ea5e9; /* bright blue */
+            --accent-500: #fb923c; /* warm orange */
+            --bg-1: #ffffff; /* page white */
+            --bg-2: #f8fafc; /* soft off-white */
+            --card: #ffffff;
+            --muted: #64748b;
+            --glass: rgba(15,23,42,0.02);
+            --glass-border: rgba(2,6,23,0.06);
+            --text: #0b1220; /* dark text */
+            --muted-text: #475569;
+            --accent-glow: 0 6px 30px rgba(251,146,60,0.06);
+        }
+
+        /**
+         * Build product preview: image + generated highlights.
+         */
+        /* buildProductPreview moved into script block to avoid JavaScript inside <style> */
+
+        html,body {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Inter', 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+            background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 100%);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 3rem 1rem;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .container-wrapper {
+            max-width: 1100px;
+            width: 100%;
+            margin: 0 auto;
+            position: relative;
+            overflow: visible;
+        }
+
+        /* Background doodles container placed inside the main wrapper */
+        .doodles {
+            pointer-events: none;
+            user-select: none;
+            position: absolute;
+            inset: -40px -40px auto -40px;
+            z-index: 0;
+            overflow: visible;
+        }
+
+        /* Doodle animations */
+        @keyframes doodleFloat {
+            0% { transform: translateY(0) translateX(0) rotate(0deg); }
+            50% { transform: translateY(-10px) translateX(6px) rotate(0.6deg); }
+            100% { transform: translateY(0) translateX(0) rotate(0deg); }
+        }
+
+#currentUserDisplay::before {
+    content: "👤 ";
+}
+
+        @keyframes doodleRotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes doodleDrift {
+            0% { transform: translateY(0) translateX(0); opacity: 0.06; }
+            50% { transform: translateY(-6px) translateX(4px); opacity: 0.08; }
+            100% { transform: translateY(0) translateX(0); opacity: 0.06; }
+        }
+
+        .doodle-float { animation: doodleFloat 9s ease-in-out infinite; transform-origin: center; }
+        .doodle-rotate { animation: doodleRotate 30s linear infinite; transform-origin: center; }
+        .doodle-drift { animation: doodleDrift 12s ease-in-out infinite; transform-origin: center; }
+
+        /* Reduce motion preference */
+        @media (prefers-reduced-motion: reduce) {
+            .doodle-float, .doodle-rotate, .doodle-drift { animation: none !important; }
+        }
+
+        /* Ensure primary content sits above the doodles */
+        .container-wrapper > :not(.doodles) {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Card (light) */
+        .card {
+            background: var(--card);
+            border: 1px solid rgba(2,6,23,0.04);
+            box-shadow: 0 8px 28px rgba(15,23,42,0.06);
+            border-radius: 12px;
+        }
+
+        .comparison-table th, .comparison-table td {
+            padding: 1rem 1.1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(15,23,42,0.04);
+            color: var(--text);
+        }
+
+        .comparison-table th {
+            color: var(--primary-500);
+            font-weight: 600;
+            letter-spacing: 0.2px;
+        }
+
+        .comparison-table tr:hover {
+            background-color: rgba(2,6,23,0.03);
+        }
+
+        /* Message Box Styling */
+        .message-box {
+            position: fixed;
+            top: 1.25rem;
+            right: 1.25rem;
+            z-index: 60;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+        }
+
+        .animate-pulse-slow {
+            animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* Row animation */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in-up { opacity: 0; animation-name: fadeInUp; animation-duration: 420ms; animation-fill-mode: forwards; }
+
+        /* Best deal badge subtle glow */
+        @keyframes sparkle { 0%{ box-shadow: 0 0 6px rgba(255,223,93,0.08);} 50%{ box-shadow: 0 0 12px rgba(255,223,93,0.14);} 100%{ box-shadow: 0 0 6px rgba(255,223,93,0.08);} }
+        .best-deal-badge { animation: sparkle 2.5s ease-in-out infinite; }
+
+        /* Chart layout */
+        .chart-section { display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; gap:1rem; }
+        @media (min-width: 768px) { .chart-section { flex-direction:row; align-items:flex-start; justify-content:space-between; } }
+
+        /* Buttons */
+        .btn-primary { background: linear-gradient(90deg,var(--primary-500),var(--accent-500)); border: none; box-shadow: 0 8px 24px rgba(14,165,233,0.08); color: #fff; }
+        .btn-ghost { background: transparent; border: 1px solid rgba(15,23,42,0.06); color: var(--muted-text); }
+
+        /* Retailer cards */
+        .retailer-card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border: 1px solid rgba(15,23,42,0.06); padding: 12px; border-radius: 12px; display:flex; align-items:center; gap:12px; }
+        .retailer-logo { width:44px; height:44px; display:flex; align-items:center; justify-content:center; border-radius:10px; font-size:20px; }
+        .retailer-meta { flex:1; min-width:0; }
+        .retailer-name { font-weight:700; color:var(--text); }
+        .retailer-offer { font-size:13px; color:var(--muted-text); }
+        .retailer-actions { display:flex; gap:8px; }
+
+        /* Override common dark-tailwind utility classes used in markup so the light theme looks consistent */
+        .bg-gray-800 { background-color: var(--card) !important; }
+        .bg-gray-700 { background-color: #f8fafc !important; }
+        .text-white { color: var(--text) !important; }
+        .text-gray-300, .text-gray-400, .text-gray-200, .text-gray-500 { color: var(--muted-text) !important; }
+        .bg-blue-500 { background-color: var(--primary-500) !important; }
+        .bg-blue-600 { background-color: #0284c7 !important; }
+        .bg-red-600 { background-color: #ef4444 !important; }
+
+        /* Modal */
+        #helpModal > div { border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 12px 40px rgba(2,6,23,0.7); }
+
+        /* Tiny responsive tweaks */
+        @media (max-width: 640px) {
+            .container-wrapper { padding: 0 8px; }
+        }
+
+        /* Floating action buttons */
+        .floating-btn {
+            background: var(--card);
+            border: 1px solid rgba(2,6,23,0.06);
+            padding: 0.5rem 0.75rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(2,6,23,0.06);
+            color: var(--text);
+            font-weight:600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-wrapper">
+
+        <!-- Decorative background doodles (SVG) -->
+        <div class="doodles" aria-hidden="true">
+            <svg width="100%" height="100%" viewBox="0 0 1200 400" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="g1" x1="0" x2="1">
+                        <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.12" />
+                        <stop offset="100%" stop-color="#fb923c" stop-opacity="0.08" />
+                    </linearGradient>
+                    <linearGradient id="g2" x1="0" x2="1">
+                        <stop offset="0%" stop-color="#a855f7" stop-opacity="0.08" />
+                        <stop offset="100%" stop-color="#10b981" stop-opacity="0.06" />
+                    </linearGradient>
+                </defs>
+
+                <!-- Top-left soft blob (floats subtly) -->
+                <g class="doodle-blob doodle-float" transform="translate(-120,-40)">
+                    <path d="M120 80 C200 10, 360 0, 420 64 C480 128, 420 220, 320 240 C220 260, 80 180, 120 80 Z" fill="url(#g1)" opacity="0.35" />
+                </g>
+
+                <!-- Bottom-right subtle wave (slow rotate) -->
+                <g class="doodle-wave doodle-rotate" transform="translate(200,80) scale(1.3)">
+                    <path d="M800 200 C760 140, 700 120, 640 140 C580 160, 540 220, 480 240 C420 260, 360 240, 300 200 C240 160, 180 120, 120 140 L120 320 L800 320 Z" fill="url(#g2)" opacity="0.28" />
+                </g>
+
+                <!-- Faint dotted pattern (decorative drift) -->
+                <g class="doodle-dots doodle-drift" opacity="0.06" fill="#0b1220">
+                    <circle cx="70" cy="320" r="6" />
+                    <circle cx="140" cy="300" r="4" />
+                    <circle cx="220" cy="340" r="5" />
+                    <circle cx="980" cy="40" r="5" />
+                    <circle cx="1040" cy="90" r="4" />
+                </g>
+            </svg>
+        </div>
+
+        <!-- LOGIN GATE: shown until user provides ID + password -->
+        <div id="loginContainer" class="min-h-screen flex items-center justify-center">
+            <div class="w-full max-w-md bg-gray-800 p-8 rounded-xl shadow-2xl">
+                <h2 class="text-2xl font-bold text-white mb-4">Please sign in to continue</h2>
+                <p class="text-sm text-gray-400 mb-6">Enter your ID and password to access the Price Finder.</p>
+
+                <label class="block text-sm font-medium text-gray-200">User ID</label>
+                <input id="loginUserId" type="text" class="w-full p-3 rounded-lg mt-2 mb-4 bg-gray-700 text-white border border-gray-600" placeholder="Enter user id">
+
+                <label class="block text-sm font-medium text-gray-200">Password</label>
+                <input id="loginPassword" type="password" class="w-full p-3 rounded-lg mt-2 mb-6 bg-gray-700 text-white border border-gray-600" placeholder="Enter password" onkeypress="if(event.key === 'Enter') handleLogin()">
+
+                <div class="flex items-center justify-between">
+                    <button id="loginButton" onclick="handleLogin()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg">Sign In</button>
+                    <button id="loginCancel" onclick="showMessage('Sign in cancelled', 'info')" class="text-sm text-gray-300 hover:underline">Cancel</button>
+                </div>
+                <p class="text-xs text-gray-400 mt-4">This is a local demo login. Any non-empty credentials will work.</p>
+            </div>
+        </div>
+
+
+
+        <!-- MAIN APPLICATION CONTENT (hidden until authenticated) -->
+        <div id="appContent" class="hidden">
+            <header class="text-center mb-10">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center justify-center w-12 h-12 rounded-xl" style="background:linear-gradient(135deg,var(--primary-500),var(--accent-500)); box-shadow: var(--accent-glow);">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M3 3h2l1 5h13l1-4H6" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <circle cx="10" cy="20" r="1.6" fill="white"/>
+                                <circle cx="18" cy="20" r="1.6" fill="white"/>
+                            </svg>
+                        </div>
+                        <div class="text-left">
+                            <div class="text-3xl sm:text-4xl font-extrabold leading-tight">SASTA KHOJO</div>
+                            <div class="text-sm text-gray-300 mt-0.5">Smart price comparison across top stores</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button id="helpBtn" onclick="openHelp()" class="btn-ghost text-gray-200 px-3 py-1 rounded hover:shadow-md">Help</button>
+                        <button id="alertsBtn" onclick="openAlerts()" title="Price Alerts" class="ml-2 bg-white/6 text-white px-3 py-1 rounded hover:bg-white/8">🔔 Alerts</button>
+                        <button id="historyBtn" onclick="openHistory()" title="Search History" class="ml-2 bg-white/6 text-white px-3 py-1 rounded hover:bg-white/8">📜 History</button>
+                        <button id="favoritesBtn" onclick="openFavorites()" title="Favorites" class="ml-2 bg-white/6 text-white px-3 py-1 rounded hover:bg-white/8">★ Favorites</button>
+                        <button id="chatBtn" onclick="openChat()" title="Chat" class="ml-2 bg-white/6 text-white px-3 py-1 rounded hover:bg-white/8">💬 Chat</button>
+                        <button id="cartBtn" onclick="openCart()" title="Cart" class="ml-2 bg-white/6 text-white px-3 py-1 rounded hover:bg-white/8">🛒 Cart <span id="cartCount" class="ml-1 text-sm font-medium">0</span></button>
+                        <button id="themeToggle" onclick="toggleDarkMode()" title="Toggle theme" class="ml-2 bg-white/6 text-white px-3 py-1 rounded hover:bg-white/8">🌙</button>
+                        <div id="authControls" class="hidden">
+                            <span id="currentUserDisplay" class="text-sm text-gray-300 mr-4"></span>
+                        </div>
+                    </div>
+                </div>
+               
+                <p class="mt-3 text-xl text-gray-400">Find The Best Deal Before You Buy. Compare Prices Across Top Retailers 🛍️</p>
+                
+                <!-- The Auth Status Banner has been removed -->
+            </header>
+
+            <!-- Search Input Card -->
+            <div class="card p-6 sm:p-8 rounded-2xl mb-10">
+                <label for="productInput" class="block text-lg font-medium mb-3 text-gray-200">What Product Are You Looking For ?</label>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <input 
+                        type="text" 
+                        id="productInput" 
+                        placeholder="E.g., Noise-Cancelling Headphones, 4K Monitor, Electric Kettle" 
+                        class="flex-1 p-3 rounded-lg border-2 border-gray-600 focus:ring-blue-500 focus:border-blue-500 bg-gray-800 text-white placeholder-gray-400 text-base"
+                        onkeypress="if(event.key === 'Enter') searchProduct()"
+                    >
+                    <button 
+                        id="searchButton"
+                        onclick="searchProduct()" 
+                        class="btn-primary text-white font-semibold py-3 px-6 rounded-xl transition duration-200 transform hover:translate-y-[-1px] active:translate-y-0"
+                    >
+                        Compare Prices
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Links & Offers -->
+            <div id="retailerOffersContainer" class="mb-6 hidden">
+                <h3 class="text-lg font-semibold text-white mb-3">Quick Links & Offers</h3>
+                <div id="retailerCards" class="grid grid-cols-1 sm:grid-cols-3 gap-4"></div>
+            </div>
+
+            <!-- Comparison Results Area -->
+            <div id="resultsContainer" class="hidden">
+                <h2 class="text-3xl font-bold mb-6 text-white" id="resultsTitle">Comparison Results</h2>
+                
+                <!-- Loading Indicator -->
+                <div id="loadingIndicator" class="hidden text-center p-10 bg-gray-700 rounded-xl">
+                    <div class="text-blue-500 text-2xl font-semibold flex items-center justify-center animate-pulse-slow">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Searching the web for the best deals...
+                    </div>
+                </div>
+
+                <!-- Pie Chart Visualization -->
+                <div id="comparisonBarContainer" class="card mb-8 p-4 rounded-2xl hidden">
+                    <h3 class="text-xl font-semibold mb-4 text-white text-center">Total Cost Contribution Pie Chart</h3>
+                    <!-- Chart container: Canvas will be drawn here -->
+                    <div id="chartContainer" class="chart-section space-y-4 md:space-y-0 md:space-x-8">
+                        <canvas id="costPieChart" class="w-full h-80 max-w-sm"></canvas>
+                        <div id="pieChartLegend" class="p-4 bg-gray-700 rounded-lg max-w-xs md:max-w-none w-full md:w-auto">
+                            <!-- Legend will be inserted here -->
+                        </div>
+                        <!-- Product preview (image + highlights) -->
+                        <div id="productPreview" class="w-full mt-6 p-3 bg-gray-800 rounded-lg text-sm text-gray-200 hidden">
+                            <div class="flex flex-col items-start gap-4">
+                                <div id="productBest" class="w-full mb-2"></div>
+                                <div class="flex-1">
+                                    <div id="productPreviewTitle" class="text-lg font-semibold text-white mb-1">Product</div>
+                                    <ul id="productHighlights" class="list-disc pl-5 space-y-1 text-gray-300"></ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table for Results -->
+                <div class="card overflow-x-auto rounded-2xl">
+                    <table class="min-w-full comparison-table">
+                        <thead class="bg-gray-800 sticky top-0">
+                            <tr>
+                                <th class="rounded-tl-xl">Retailer</th>
+                                <th>Price (₹)</th>
+                                <th>Shipping (₹)</th>
+                                <th>Total Cost (₹)</th>
+                                <th>Delivery Time</th>
+                                <th>Availability</th>
+                                <th class="rounded-tr-xl">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsTableBody">
+                            <!-- Results will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-sm mt-4 text-gray-400">*Note: Prices, stock, and delivery are simulated in Rupees (INR) and do not reflect real-time data.</p>
+            </div>
+
+            <!-- Help Center Modal -->
+            <div id="helpModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 p-4 z-50">
+                <div class="w-full max-w-2xl card rounded-2xl p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <h3 class="text-xl font-semibold text-white">Help Center</h3>
+                        <button onclick="closeHelp()" class="text-gray-300 hover:text-white">Close</button>
+                    </div>
+
+                    <label class="block text-sm text-gray-300">Subject</label>
+                    <input id="helpSubject" class="w-full p-3 rounded-lg bg-gray-700 text-white border border-gray-600 mb-3" placeholder="Short summary" />
+
+                    <label class="block text-sm text-gray-300">Describe your problem</label>
+                    <textarea id="helpMessage" class="w-full p-3 rounded-lg bg-gray-700 text-white border border-gray-600 mb-3" rows="6" placeholder="Describe what happened, steps to reproduce, and any screenshots or links..."></textarea>
+
+                    <div class="flex items-center gap-3">
+                        <button id="helpSubmitBtn" onclick="submitHelpRequest()" class="btn-primary text-white px-4 py-2 rounded">Send Request</button>
+                        <button onclick="closeHelp()" class="btn-ghost text-gray-300 px-3 py-2 rounded">Cancel</button>
+                        <div id="helpSending" class="text-sm text-gray-300 hidden">Sending…</div>
+                    </div>
+
+                    <hr class="my-4 border-gray-700" />
+                    <h4 class="text-sm text-gray-300 mb-2">Previous requests (saved locally)</h4>
+                    <div id="helpRequestsList" class="max-h-40 overflow-auto text-sm text-gray-200"></div>
+                </div>
+            </div>
+
+            <!-- Alerts Modal -->
+            <div id="alertsModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 p-4 z-50">
+                <div class="w-full max-w-md card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-white">Price Alerts</h3>
+                        <button onclick="closeAlerts()" class="text-gray-300 hover:text-white">Close</button>
+                    </div>
+                    <div class="mb-3 text-sm text-gray-300">Manage your tracked prices. Alerts are stored locally in your browser.</div>
+                    <div id="alertsList" class="max-h-64 overflow-auto text-sm text-gray-200"></div>
+                    <div class="mt-4 flex items-center justify-end gap-3">
+                        <button onclick="clearAlerts()" class="btn-ghost text-gray-300 px-3 py-2 rounded">Clear All</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Modal -->
+            <div id="historyModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 p-4 z-50">
+                <div class="w-full max-w-md card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-white">Search History</h3>
+                        <button onclick="closeHistory()" class="text-gray-300 hover:text-white">Close</button>
+                    </div>
+                    <div id="historyList" class="max-h-64 overflow-auto text-sm text-gray-200 mb-4"></div>
+                    <div class="flex items-center justify-end gap-3">
+                        <button onclick="clearHistory()" class="btn-ghost text-gray-300 px-3 py-2 rounded">Clear</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Favorites Modal -->
+            <div id="favoritesModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 p-4 z-50">
+                <div class="w-full max-w-md card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-white">Favorites</h3>
+                        <button onclick="closeFavorites()" class="text-gray-300 hover:text-white">Close</button>
+                    </div>
+                    <div id="favoritesList" class="max-h-64 overflow-auto text-sm text-gray-200 mb-4"></div>
+                </div>
+            </div>
+
+            <!-- Chat Modal -->
+            <div id="chatModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 p-4 z-50">
+                <div class="w-full max-w-md card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-white">Assistant</h3>
+                        <button onclick="closeChat()" class="text-gray-300 hover:text-white">Close</button>
+                    </div>
+                    <div id="chatWindow" class="bg-gray-800 rounded p-3 max-h-64 overflow-auto text-sm text-gray-200 mb-3"></div>
+                    <div class="flex gap-2">
+                        <input id="chatInput" class="flex-1 p-2 rounded bg-gray-700 text-white border border-gray-600" placeholder="Ask me about deals or how to use the site..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+                        <button onclick="sendChatMessage()" class="btn-primary px-4 py-2 rounded">Send</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cart Modal -->
+            <div id="cartModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 p-4 z-50">
+                <div class="w-full max-w-2xl card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Your Cart</h3>
+                        <button onclick="closeCart()" class="text-gray-600 hover:text-gray-800">Close</button>
+                    </div>
+                    <div id="cartList" class="max-h-64 overflow-auto text-sm"></div>
+                    <div class="mt-4 flex items-center justify-between">
+                        <div class="text-sm text-gray-700">Total: <span id="cartTotal" class="font-semibold">₹0</span></div>
+                        <div class="flex items-center gap-3">
+                            <button onclick="clearCart()" class="btn-ghost px-3 py-2 rounded">Clear</button>
+                            <button onclick="checkoutCart()" class="btn-primary text-white px-4 py-2 rounded">Checkout</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Message Box for errors/info (replaces alert()) -->
+
+            <!-- Customer reviews removed -->
+
+            <!-- Footer: quick access to Reviews moved to floating action button -->
+            <div class="mt-6 mb-4 flex items-center justify-center" aria-hidden="true"></div>
+
+            <div id="messageBox" class="message-box opacity-0 pointer-events-none"></div>
+
+            <!-- Review Modal (lightweight) -->
+            <div id="reviewModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 p-4 z-50">
+                <div class="w-full max-w-md card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-lg font-semibold text-white">Customer Review</h3>
+                        <button onclick="closeReviewModal()" class="text-sm text-gray-300">Close</button>
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-sm text-gray-300">Product (optional)</label>
+                        <input id="reviewProduct" type="text" class="w-full p-2 rounded bg-gray-700 text-white border border-gray-600" placeholder="Product name (leave empty to attach to last searched)">
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-sm text-gray-300">Rating</label>
+                        <select id="reviewRating" class="p-2 rounded bg-gray-700 text-white border border-gray-600 w-32">
+                            <option value="5">5 - Excellent</option>
+                            <option value="4">4 - Good</option>
+                            <option value="3">3 - Average</option>
+                            <option value="2">2 - Poor</option>
+                            <option value="1">1 - Terrible</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-sm text-gray-300">Your review</label>
+                        <textarea id="reviewText" rows="3" class="w-full p-2 rounded bg-gray-700 text-white border border-gray-600" placeholder="Share your experience..."></textarea>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button id="submitReviewBtn" onclick="submitReview()" class="btn-primary text-white px-4 py-2 rounded">Submit Review</button>
+                        <button onclick="viewReviews((document.getElementById('reviewProduct')||{}).value || currentlyViewedProduct)" class="btn-ghost px-3 py-2 rounded">View Reviews</button>
+                    </div>
+                    <hr class="my-4 border-gray-700" />
+                    <div id="reviewModalList" class="max-h-48 overflow-auto text-sm text-gray-200"></div>
+                </div>
+            </div>
+
+            <!-- Floating action button: Reviews (left) and Logout (right) -->
+            <button id="floatingReviewBtn" onclick="openReviewModal()" aria-label="Open customer review" class="floating-btn" style="position:fixed;left:20px;bottom:20px;z-index:70;">Reviews</button>
+            <button id="logoutBtn" onclick="logoutUser()" aria-label="Sign out" class="floating-btn" style="position:fixed;right:20px;bottom:20px;z-index:70;background:linear-gradient(90deg,var(--primary-500),var(--accent-500));color:#fff;border:none;">Logout</button>
+
+        </div>
+    </div>
+
+    <!-- CONSOLIDATED FIREBASE AND APPLICATION SCRIPT -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, setLogLevel, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // --- GLOBAL FIREBASE CONFIGURATION ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let app, auth, db, currentUserId = null;
+
+        // --- DOM ELEMENTS ---
+        const appContent = document.getElementById('appContent');
+        const loginContainer = document.getElementById('loginContainer');
+        const loginUserId = document.getElementById('loginUserId');
+        const loginPassword = document.getElementById('loginPassword');
+        const loginButtonEl = document.getElementById('loginButton');
+        const authControls = document.getElementById('authControls');
+        const currentUserDisplay = document.getElementById('currentUserDisplay');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const resultsTableBody = document.getElementById('resultsTableBody');
+        const resultsTitle = document.getElementById('resultsTitle');
+        const productInput = document.getElementById('productInput');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const searchButton = document.getElementById('searchButton');
+        const messageBox = document.getElementById('messageBox');
+        const comparisonBarContainer = document.getElementById('comparisonBarContainer');
+        const pieChartLegend = document.getElementById('pieChartLegend');
+
+        // --- CONSTANTS ---
+        const PIE_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#a855f7'];
+        const CURRENCY_SYMBOL = '₹'; // Indian Rupee
+
+
+        // --- FIREBASE INITIALIZATION ---
+        if (Object.keys(firebaseConfig).length > 0) {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            // MANDATORY: Set log level to debug for better console visibility
+            setLogLevel('debug'); 
+        } else {
+            console.error("Firebase configuration is missing. Authentication will fail.");
+        }
+
+        // --- SIMPLE LOCAL LOGIN/SESSION LOGIC ---
+        const SESSION_KEY = 'finder_user';
+
+        function isAuthenticated() {
+            return !!localStorage.getItem(SESSION_KEY);
+        }
+
+        function showAuthenticatedUI(username) {
+            if (loginContainer) loginContainer.classList.add('hidden');
+            if (appContent) appContent.classList.remove('hidden');
+            if (authControls) authControls.classList.remove('hidden');
+            if (currentUserDisplay) currentUserDisplay.textContent = username ? `Signed in as ${username}` : '';
+        }
+
+        function showLoginUI() {
+            if (loginContainer) loginContainer.classList.remove('hidden');
+            if (appContent) appContent.classList.add('hidden');
+            if (authControls) authControls.classList.add('hidden');
+        }
+
+        function handleLogin() {
+            const uid = loginUserId.value.trim();
+            const pwd = loginPassword.value.trim();
+            if (!uid || !pwd) {
+                showMessage('Please provide both ID and password.', 'error');
+                return;
+            }
+
+            loginButtonEl.disabled = true;
+            loginButtonEl.textContent = 'Signing in...';
+
+            // For demo: accept any non-empty credentials and store in localStorage
+            setTimeout(() => {
+                localStorage.setItem(SESSION_KEY, JSON.stringify({ id: uid }));
+                showMessage('Signed in successfully', 'success');
+                showAuthenticatedUI(uid);
+                loginButtonEl.disabled = false;
+                loginButtonEl.textContent = 'Sign In';
+            }, 600);
+        }
+
+        function logoutUser() {
+            localStorage.removeItem(SESSION_KEY);
+            showMessage('Signed out', 'info');
+            showLoginUI();
+        }
+
+        // Expose login functions to global scope so inline handlers can call them
+        window.handleLogin = handleLogin;
+        window.logoutUser = logoutUser;
+
+        // initialize login state on load
+        if (isAuthenticated()) {
+            try {
+                const user = JSON.parse(localStorage.getItem(SESSION_KEY));
+                showAuthenticatedUI(user && user.id ? user.id : 'User');
+            } catch (e) {
+                showLoginUI();
+            }
+        } else {
+            showLoginUI();
+        }
+
+        // --- CORE APPLICATION FUNCTIONS ---
+
+        /**
+         * Custom message display instead of alert().
+         * @param {string} message - The message to display.
+         * @param {string} type - 'success', 'error', or 'info'.
+         */
+        function showMessage(message, type = 'info') {
+            const colors = {
+                'success': 'bg-green-600',
+                'error': 'bg-red-600',
+                'info': 'bg-blue-600'
+            };
+            
+            messageBox.innerHTML = `
+                <div class="p-4 rounded-lg text-white shadow-xl ${colors[type]} max-w-sm">
+                    ${message}
+                </div>
+            `;
+            messageBox.classList.remove('opacity-0', 'pointer-events-none');
+            messageBox.classList.add('opacity-100');
+
+            setTimeout(() => {
+                messageBox.classList.add('opacity-0', 'pointer-events-none');
+                messageBox.classList.remove('opacity-100');
+            }, 3000);
+        }
+
+        /**
+         * Simulates fetching comparison data for a given product using INR.
+         */
+        function simulateComparison(productName) {
+            // Base price scaled up for INR (e.g., ₹12,999 up to ₹32,999)
+            const basePrice = (productName.length % 5) * 5000 + 12999; 
+            const isHighDemand = productName.toLowerCase().includes('pro') || productName.toLowerCase().includes('new');
+
+            // Adjusted base modifiers to be less biased and increase random variation
+            const retailers = [
+                { name: "Amazon.in", shipping: 0, priceModifier: 0, linkText: "Buy on Amazon" },
+                { name: "Flipkart", shipping: 599, priceModifier: 1500, linkText: "View at Flipkart" },
+                // Reduced Reliance advantage so it doesn't win by default
+                { name: "Reliance Digital", shipping: 499, priceModifier: -200, linkText: "Order from Digital" },
+                { name: "Official Store", shipping: 0, priceModifier: 2500, linkText: "Go to Official Site" },
+                { name: "Croma", shipping: 799, priceModifier: 1200, linkText: "Check Croma Stock" },
+            ];
+
+            return retailers.map(retailer => {
+                // Increase random price noise so small modifiers don't always decide the winner
+                const price = basePrice + retailer.priceModifier + (Math.random() * 1000 - 500);
+                let availability = true;
+
+                if (isHighDemand && Math.random() < 0.25) {
+                    availability = false;
+                }
+
+                // Add a little more randomness to shipping but never go below 0
+                const shipping = Math.max(0, retailer.shipping + (Math.random() * 300 - 150));
+                
+                let deliveryDays;
+                if (retailer.name.includes("Amazon.in") || retailer.name.includes("Flipkart")) {
+                    deliveryDays = Math.floor(Math.random() * 3) + 1;
+                } else if (retailer.name.includes("Official Store")) {
+                    deliveryDays = Math.floor(Math.random() * 4) + 1;
+                } else {
+                    deliveryDays = Math.floor(Math.random() * 7) + 2;
+                }
+                
+                const totalCost = (price + shipping);
+
+                // Build retailer-specific search/open link for the product
+                const q = encodeURIComponent(productName);
+                let link = '#';
+                if (retailer.name.includes('Amazon')) {
+                    link = `https://www.amazon.in/s?k=${q}`;
+                } else if (retailer.name.includes('Flipkart')) {
+                    link = `https://www.flipkart.com/search?q=${q}`;
+                } else if (retailer.name.includes('Reliance')) {
+                    link = `https://www.reliancedigital.in/search?q=${q}`;
+                } else if (retailer.name.includes('Croma')) {
+                    link = `https://www.croma.com/search/?text=${q}`;
+                } else if (retailer.name.includes('Official')) {
+                    link = `https://www.google.com/search?q=${encodeURIComponent(productName + ' official site')}`;
+                }
+
+                return {
+                    retailer: retailer.name,
+                    price: parseFloat(price.toFixed(0)), 
+                    shipping: parseFloat(shipping.toFixed(0)), 
+                    available: availability,
+                    linkText: retailer.linkText,
+                    link: link,
+                    deliveryDays: deliveryDays,
+                    totalCost: parseFloat(totalCost.toFixed(0))
+                };
+            });
+        }
+
+        // --- RETAILER LINKS & GOOGLE SEARCH HELPERS ---
+        const RETAILER_DEFS = [
+            { id: 'amazon', name: 'Amazon.in', logoSvg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 3h2l1 5h13l1-4H6" stroke="#0b1220" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="20" r="1.6" fill="#0b1220"/><circle cx="18" cy="20" r="1.6" fill="#0b1220"/></svg>', pattern: q => `https://www.amazon.in/s?k=${q}` },
+            { id: 'flipkart', name: 'Flipkart', logoSvg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7h6l2 9h7" stroke="#0b1220" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="4" y="4" width="6" height="3" rx="1" fill="#0b1220"/></svg>', pattern: q => `https://www.flipkart.com/search?q=${q}` },
+            { id: 'reliance', name: 'Reliance Digital', logoSvg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 3v6" stroke="#0b1220" stroke-width="1.5" stroke-linecap="round"/><path d="M12 3v12" stroke="#0b1220" stroke-width="1.5" stroke-linecap="round"/><path d="M18 3v8" stroke="#0b1220" stroke-width="1.5" stroke-linecap="round"/></svg>', pattern: q => `https://www.reliancedigital.in/search?q=${q}` },
+            { id: 'croma', name: 'Croma', logoSvg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12h16" stroke="#0b1220" stroke-width="1.5" stroke-linecap="round"/><path d="M12 4v16" stroke="#0b1220" stroke-width="1.5" stroke-linecap="round"/></svg>', pattern: q => `https://www.croma.com/search/?text=${q}` },
+            { id: 'official', name: 'Official Store', logoSvg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="6" width="18" height="12" rx="2" stroke="#0b1220" stroke-width="1.2"/><path d="M8 6v-2" stroke="#0b1220" stroke-width="1.2" stroke-linecap="round"/></svg>', pattern: q => `https://www.google.com/search?q=${encodeURIComponent(q + ' official site')}` }
+        ];
+
+        function hashStringToInt(s) {
+            let h = 0; for (let i = 0; i < s.length; i++) h = (h << 5) - h + s.charCodeAt(i) | 0; return Math.abs(h);
+        }
+
+        function computeOffer(product, retailerId) {
+            // deterministic pseudo-random discount between 5% and 25%
+            const h = hashStringToInt(product + '|' + retailerId);
+            const pct = 5 + (h % 21); // 5..25
+            const extra = (h % 2) === 0 ? ' + bank offers' : '';
+            return { pct, label: `${pct}% off${extra}` };
+        }
+
+        function buildRetailerLinks(product) {
+            const container = document.getElementById('retailerOffersContainer');
+            const cards = document.getElementById('retailerCards');
+            if (!container || !cards) return;
+            if (!product || !product.trim()) { container.classList.add('hidden'); return; }
+            container.classList.remove('hidden');
+            cards.innerHTML = '';
+            const q = encodeURIComponent(product.trim());
+
+            // Add retailer cards (using data- attributes; event delegation handles actions)
+            RETAILER_DEFS.forEach(def => {
+                const offer = computeOffer(product, def.id);
+                const card = document.createElement('div');
+                card.className = 'retailer-card';
+                const logo = def.logoSvg ? def.logoSvg : (def.logo || '');
+                card.innerHTML = `
+                    <div class="retailer-logo" style="background:linear-gradient(135deg, rgba(14,165,233,0.08), rgba(251,146,60,0.06))">${logo}</div>
+                    <div class="retailer-meta">
+                        <div class="retailer-name">${def.name}</div>
+                        <div class="retailer-offer">Offer: <strong>${offer.label}</strong></div>
+                    </div>
+                    <div class="retailer-actions">
+                        <button data-action="open" data-id="${def.id}" data-q="${q}" class="btn-primary px-3 py-1 rounded">Open</button>
+                        <button data-action="copy" data-id="${def.id}" data-q="${q}" class="btn-ghost px-3 py-1 rounded">Copy</button>
+                    </div>
+                `;
+                cards.appendChild(card);
+            });
+
+            // Add Google search card (show quick search / API result)
+            const googleCard = document.createElement('div');
+            googleCard.className = 'retailer-card';
+            googleCard.innerHTML = `
+                <div class="retailer-logo" style="background:linear-gradient(135deg, rgba(168,85,247,0.06), rgba(16,185,129,0.05))">🔎</div>
+                <div class="retailer-meta">
+                    <div class="retailer-name">Search on Google</div>
+                    <div class="retailer-offer">Tap to search Google; uses Custom Search API if configured.</div>
+                    <div id="googleSearchResult" class="text-xs text-gray-400 mt-1"></div>
+                </div>
+                <div class="retailer-actions">
+                    <button data-action="google-search" data-q="${q}" class="btn-primary px-3 py-1 rounded">Search</button>
+                    <button data-action="open" data-id="google" data-q="${q}" class="btn-ghost px-3 py-1 rounded">Open</button>
+                </div>
+            `;
+            cards.appendChild(googleCard);
+        }
+
+        // Event delegation for retailer card actions (open / copy / google-search)
+        (function attachRetailerDelegation() {
+            const cards = document.getElementById('retailerCards');
+            if (!cards) return;
+            // remove any duplicate listeners by namespacing using a flag
+            if (cards._hasRetailerDelegation) return;
+            cards._hasRetailerDelegation = true;
+            cards.addEventListener('click', (ev) => {
+                const btn = ev.target.closest('button');
+                if (!btn || !cards.contains(btn)) return;
+                const action = btn.dataset.action;
+                const id = btn.dataset.id;
+                const q = btn.dataset.q;
+                if (action === 'open') {
+                    // for 'open', q is encoded; keep it encoded so pattern() works
+                    openRetailerLink(id, q);
+                } else if (action === 'copy') {
+                    copyRetailerLink(id, q);
+                } else if (action === 'google-search') {
+                    // decode q for fetchGoogleSearch which expects a plain product string
+                    const product = q ? decodeURIComponent(q) : '';
+                    fetchGoogleSearch(product);
+                }
+            });
+        })();
+
+        function openRetailerLink(id, q) {
+            const def = RETAILER_DEFS.find(r => r.id === id);
+            if (id === 'google') {
+                // open a normal google search
+                const url = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+                window.open(url, '_blank');
+                return;
+            }
+            if (!def) return;
+            const url = def.pattern(q);
+            window.open(url, '_blank');
+        }
+
+        function copyRetailerLink(id, q) {
+            const def = RETAILER_DEFS.find(r => r.id === id);
+            if (!def) return;
+            const url = def.pattern(q);
+            navigator.clipboard?.writeText(url).then(() => showMessage('Link copied to clipboard', 'success')).catch(() => showMessage('Unable to copy link', 'error'));
+        }
+
+        async function fetchGoogleSearch(product) {
+            const target = document.getElementById('googleSearchResult');
+            if (!product) return;
+            if (!target) return;
+            target.textContent = 'Searching...';
+            // Check for API key and CX variables provided securely via globals
+            const API_KEY = typeof window.GOOGLE_API_KEY !== 'undefined' ? window.GOOGLE_API_KEY : (typeof __google_api_key !== 'undefined' ? __google_api_key : null);
+            const CX = typeof window.GOOGLE_CX !== 'undefined' ? window.GOOGLE_CX : (typeof __google_cx !== 'undefined' ? __google_cx : null);
+            if (API_KEY && CX) {
+                try {
+                    const url = `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(API_KEY)}&cx=${encodeURIComponent(CX)}&q=${encodeURIComponent(product)}`;
+                    const res = await fetch(url);
+                    if (!res.ok) throw new Error('API error');
+                    const json = await res.json();
+                    const item = (json.items && json.items[0]) || null;
+                    if (item) {
+                        target.innerHTML = `<div><a class="text-sm text-blue-300 underline" href="${item.link}" target="_blank">${escapeHtml(item.title)}</a><div class="text-xs text-gray-400">${escapeHtml(item.snippet || '')}</div></div>`;
+                    } else {
+                        target.textContent = 'No results from Custom Search.';
+                    }
+                } catch (e) {
+                    console.warn('Google API failed', e);
+                    target.textContent = 'Google API failed — opening regular search instead.';
+                    window.open(`https://www.google.com/search?q=${encodeURIComponent(product)}`, '_blank');
+                }
+            } else {
+                // Fallback: open google search in new tab and show message.
+                target.textContent = 'No API credentials — opening regular Google search.';
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(product)}`, '_blank');
+            }
+            setTimeout(() => { if (target) target.textContent = ''; }, 4000);
+        }
+
+        /**
+         * Renders the pie chart visualization on the canvas.
+         */
+        function renderPieChart(availableItems, bestValueRetailerName) {
+            const canvas = document.getElementById('costPieChart');
+            if (!canvas) {
+                console.error("Canvas element not found.");
+                return;
+            }
+            const ctx = canvas.getContext('2d');
+            
+            const size = 300;
+            canvas.width = size;
+            canvas.height = size;
+            ctx.clearRect(0, 0, size, size);
+
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const radius = size / 2 * 0.9; 
+
+            const grandTotal = availableItems.reduce((sum, item) => sum + item.totalCost, 0);
+
+            if (grandTotal === 0) {
+                pieChartLegend.innerHTML = '<p class="text-center text-gray-400">No available items to chart.</p>';
+                return;
+            }
+
+            let startAngle = 0;
+            pieChartLegend.innerHTML = ''; 
+
+            availableItems.forEach((item, index) => {
+                const sliceAngle = (item.totalCost / grandTotal) * 2 * Math.PI;
+                const endAngle = startAngle + sliceAngle;
+                const color = PIE_COLORS[index % PIE_COLORS.length];
+                const percentage = ((item.totalCost / grandTotal) * 100).toFixed(1);
+                const isBestDeal = item.retailer === bestValueRetailerName;
+
+                // 1. Draw the slice
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+                
+                // 2. Add an outline for visual separation
+                const computedBg = getComputedStyle(document.documentElement).getPropertyValue('--bg-color') || '#1f2937';
+                ctx.strokeStyle = computedBg.trim();
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // 3. Add text label (for slices >= 8%)
+                if (sliceAngle > 0.3) { 
+                    const midAngle = startAngle + sliceAngle / 2;
+                    const textRadius = radius * 0.75; 
+                    const textX = centerX + textRadius * Math.cos(midAngle);
+                    const textY = centerY + textRadius * Math.sin(midAngle);
+                    
+                    ctx.fillStyle = isBestDeal ? '#1f2937' : '#f9fafb'; 
+                    ctx.font = 'bold 15px Inter, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(`${percentage}%`, textX, textY);
+                }
+
+                // 4. Update the legend
+                const legendItem = document.createElement('div');
+                legendItem.className = 'flex items-center justify-between p-2 rounded-lg';
+                if (isBestDeal) {
+                    legendItem.classList.add('bg-yellow-500/20', 'text-yellow-300', 'font-bold');
+                } else {
+                    legendItem.classList.add('text-gray-200', 'hover:bg-gray-600');
+                }
+                
+                legendItem.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="w-4 h-4 rounded-full mr-3" style="background-color: ${color};"></span>
+                        <span class="truncate">${item.retailer}</span>
+                    </div>
+                    <div>
+                        ${CURRENCY_SYMBOL}${item.totalCost.toLocaleString('en-IN')} (${percentage}%)
+                        ${isBestDeal ? '<span class="ml-2 text-xs bg-yellow-500 text-gray-900 px-2 py-0.5 rounded-full best-deal-badge">BEST VALUE</span>' : ''}
+                    </div>
+                `;
+                pieChartLegend.appendChild(legendItem);
+
+                startAngle = endAngle; 
+            });
+        }
+
+                // Build product preview: image + generated highlights.
+                function buildProductPreview(productName, availableItems, bestValueRetailerName) {
+                    const preview = document.getElementById('productPreview');
+                    const title = document.getElementById('productPreviewTitle');
+                    const highlights = document.getElementById('productHighlights');
+                    if (!preview || !title || !highlights) return;
+                    if (!productName || !productName.trim()) { preview.classList.add('hidden'); return; }
+
+                    title.textContent = productName;
+                    preview.classList.remove('hidden');
+
+                    // Build a few deterministic highlights based on availableItems
+                    const prices = (availableItems || []).map(i => Number(i.totalCost || 0)).filter(v => v > 0);
+                    const avg = prices.length ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : null;
+                    const min = prices.length ? Math.min(...prices) : null;
+                    const max = prices.length ? Math.max(...prices) : null;
+                    const best = bestValueRetailerName || (availableItems && availableItems[0] && availableItems[0].retailer) || 'N/A';
+                    const fastest = (availableItems || []).slice().sort((a, b) => (a.deliveryDays || 999) - (b.deliveryDays || 999))[0];
+                    const fastestName = fastest ? `${fastest.retailer} • ${fastest.deliveryDays} day${fastest.deliveryDays > 1 ? 's' : ''}` : 'N/A';
+                    const inStockCount = (availableItems || []).filter(i => i.available).length;
+
+                    const bullets = [];
+                    if (typeof CURRENCY_SYMBOL !== 'undefined' && avg !== null) bullets.push(`Avg. total cost: ${CURRENCY_SYMBOL}${avg.toLocaleString('en-IN')}`);
+                    if (min !== null && max !== null) bullets.push(`Price range: ${typeof CURRENCY_SYMBOL !== 'undefined' ? CURRENCY_SYMBOL : ''}${min.toLocaleString('en-IN')} — ${typeof CURRENCY_SYMBOL !== 'undefined' ? CURRENCY_SYMBOL : ''}${max.toLocaleString('en-IN')}`);
+                    bullets.push(`Best value: ${best}`);
+                    bullets.push(`Fastest delivery: ${fastestName}`);
+                    bullets.push(`${inStockCount} retailer(s) available`);
+
+                    highlights.innerHTML = bullets.map(b => `<li>${escapeHtml(b)}</li>`).join('');
+
+                    // Display most accurate best offer if available
+                    const bestBox = document.getElementById('productBest');
+                    if (bestBox) {
+                        const avail = (availableItems || []).filter(i => i.available).slice().sort((a,b) => {
+                            if ((a.totalCost||0) !== (b.totalCost||0)) return a.totalCost - b.totalCost;
+                            return (a.deliveryDays||999) - (b.deliveryDays||999);
+                        })[0];
+                        if (avail) {
+                            const priceStr = `${CURRENCY_SYMBOL}${Math.round(avail.totalCost).toLocaleString('en-IN')}`;
+                            const retailerEsc = escapeHtml(avail.retailer || '');
+                            const buyLink = avail.link || '#';
+                            bestBox.innerHTML = `
+                                <div class="w-full p-3 rounded-lg bg-gradient-to-r from-blue-900/40 to-transparent border border-white/6 flex items-center justify-between">
+                                    <div>
+                                        <div class="text-sm text-gray-300">Best Price</div>
+                                        <div class="text-2xl font-bold text-white">${priceStr}</div>
+                                        <div class="text-xs text-gray-400">${retailerEsc} • ${avail.deliveryDays || '—'} day(s)</div>
+                                    </div>
+                                    <div>
+                                        <a href="${buyLink}" target="_blank" class="btn-primary px-3 py-2 rounded">Buy</a>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            bestBox.innerHTML = `<div class="text-gray-400">No available offers.</div>`;
+                        }
+                    }
+                }
+
+
+        /**
+         * Renders a simple horizontal bar chart of totalCost per retailer.
+         * Accepts the full data array so bars show each retailer (available or not).
+         */
+        // Bar chart removed — using product preview image + highlights instead
+
+
+        /**
+         * Renders the comparison data into the HTML table and the comparison bar chart.
+         */
+        function renderResults(data, productName) {
+            resultsTableBody.innerHTML = '';
+            
+            const availableItems = data.filter(item => item.available);
+            let bestValueItem = null;
+
+            if (availableItems.length > 0) {
+                // Best Value: lowest total cost, then fastest delivery
+                bestValueItem = availableItems.reduce((best, current) => {
+                    if (current.totalCost < best.totalCost) return current;
+                    if (current.totalCost === best.totalCost && current.deliveryDays < best.deliveryDays) return current;
+                    return best;
+                }, availableItems[0]);
+            }
+            const bestValueRetailerName = bestValueItem ? bestValueItem.retailer : null;
+
+            // --- 1. RENDER PIE CHART ---
+            comparisonBarContainer.classList.remove('hidden');
+            renderPieChart(availableItems, bestValueRetailerName);
+            // --- 1.5 BUILD PRODUCT PREVIEW (image + highlights) ---
+            try { buildProductPreview(productName, availableItems, bestValueRetailerName); } catch (e) { console.warn('buildProductPreview failed', e); }
+
+
+            // Sort data for the table: lowest cost first, then fastest delivery
+            data.sort((a, b) => {
+                const totalA = a.available ? a.totalCost : Infinity;
+                const totalB = b.available ? b.totalCost : Infinity;
+
+                if (totalA !== totalB) {
+                    return totalA - totalB;
+                }
+                return a.deliveryDays - b.deliveryDays;
+            });
+
+            // --- 2. RENDER TABLE ROWS ---
+            data.forEach((item, index) => {
+                const totalCost = item.totalCost.toLocaleString('en-IN');
+                const isBestDeal = item.retailer === bestValueRetailerName && item.available;
+
+                const row = document.createElement('tr');
+                row.className = `${isBestDeal ? 'bg-blue-900/50' : 'hover:bg-gray-600/50 transition duration-150'} fade-in-up`;
+                row.style.animationDelay = `${index * 0.1}s`;
+
+                const availabilityText = item.available 
+                    ? `<span class="text-green-400 font-semibold">In Stock</span>`
+                    : `<span class="text-red-400 font-semibold">Out of Stock</span>`;
+
+                                const actionCell = item.available 
+                                                                                                                ? `<div class="flex items-center gap-2">` +
+                                                                                                                        `<a href="${item.link}" target="_blank" rel="noopener noreferrer" class="inline-block bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold py-2 px-4 rounded-lg transition duration-200">${item.linkText}</a>` +
+                                                                                                                        `<button onclick='toggleTrackAlert(${JSON.stringify(productName)}, ${JSON.stringify(item.retailer)}, ${item.totalCost})' class="inline-block btn-ghost text-sm text-gray-200 px-3 py-2 rounded">Track Price</button>` +
+                                                                                                                        `<button onclick='toggleFavorite(${JSON.stringify(productName)}, ${JSON.stringify(item.retailer)}, ${item.totalCost}, ${JSON.stringify(item.link)})' class="inline-block btn-ghost text-sm text-gray-200 px-3 py-2 rounded">★</button>` +
+                                                                                                                        `<button onclick='addToCart(${JSON.stringify(productName)}, ${JSON.stringify(item.retailer)}, ${item.totalCost}, ${JSON.stringify(item.link)})' class="inline-block btn-ghost text-sm text-gray-200 px-3 py-2 rounded">Add to Cart</button>` +
+                                                                                                                    `</div>`
+                                                                                                                : `<span class="text-gray-500 text-sm">Notify Me</span>`;
+                
+                const bestDealBadge = isBestDeal 
+                    ? `<span class="ml-2 text-xs bg-yellow-500 text-gray-900 px-2 py-0.5 rounded-full font-bold best-deal-badge">BEST DEAL!</span>`
+                    : '';
+                
+                const deliveryText = item.available 
+                    ? `<span class="${item.deliveryDays <= 2 ? 'text-green-400' : (item.deliveryDays <= 4 ? 'text-yellow-400' : 'text-red-400')}">${item.deliveryDays} Day${item.deliveryDays > 1 ? 's' : ''}</span>`
+                    : 'N/A';
+
+
+                row.innerHTML = `
+                    <td class="whitespace-nowrap font-medium text-lg">${item.retailer} ${bestDealBadge}</td>
+                    <td>${CURRENCY_SYMBOL}${item.price.toLocaleString('en-IN')}</td>
+                    <td>${item.shipping === 0 ? '<span class="text-green-400">FREE</span>' : `${CURRENCY_SYMBOL}${item.shipping.toLocaleString('en-IN')}`}</td>
+                    <td class="font-bold text-xl text-yellow-300">${CURRENCY_SYMBOL}${totalCost}</td>
+                    <td>${deliveryText}</td>
+                    <td>${availabilityText}</td>
+                    <td>${actionCell}</td>
+                `;
+                resultsTableBody.appendChild(row);
+            });
+
+            // Build quick retailer links + offers for this product
+            try { buildRetailerLinks(productName); } catch (e) { console.warn('buildRetailerLinks failed', e); }
+        }
+
+        /**
+         * Main function to handle the search process.
+         */
+        function searchProduct() {
+            const productName = productInput.value.trim();
+            if (productName === "") {
+                showMessage("Please enter a product name to start the comparison.", 'error');
+                return;
+            }
+
+            productInput.disabled = true;
+            searchButton.disabled = true;
+            searchButton.textContent = 'Searching...';
+            resultsContainer.classList.remove('hidden');
+            loadingIndicator.classList.remove('hidden');
+            resultsTableBody.innerHTML = '';
+            pieChartLegend.innerHTML = ''; 
+            
+            resultsTitle.textContent = `Comparison Results for: "${productName}"`;
+
+            // Simulate network delay
+            setTimeout(() => {
+                try {
+                    const comparisonData = simulateComparison(productName);
+                    renderResults(comparisonData, productName);
+                    try { buildRetailerLinks(productName); } catch (e) { /* ignore */ }
+                    // record search history and load reviews for this product
+                    try { recordSearch(productName); } catch (e) { /* ignore */ }
+                    try { loadReviews(productName); } catch (e) { /* ignore */ }
+                    
+                    loadingIndicator.classList.add('hidden');
+                    productInput.disabled = false;
+                    searchButton.disabled = false;
+                    searchButton.textContent = 'Compare Prices';
+                    showMessage("Comparison complete! Check the results below.", 'success');
+                } catch (error) {
+                    console.error("Comparison failed:", error);
+                    loadingIndicator.classList.add('hidden');
+                    productInput.disabled = false;
+                    searchButton.disabled = false;
+                    searchButton.textContent = 'Compare Prices';
+                    showMessage("An unexpected error occurred during comparison.", 'error');
+                }
+            }, 1500);
+        }
+
+            // --- HELP CENTER HANDLERS ---
+            function openHelp() {
+                const modal = document.getElementById('helpModal');
+                if (modal) modal.classList.remove('hidden');
+                loadHelpRequests();
+            }
+
+            function closeHelp() {
+                const modal = document.getElementById('helpModal');
+                if (modal) modal.classList.add('hidden');
+            }
+
+            function loadHelpRequests() {
+                const listEl = document.getElementById('helpRequestsList');
+                if (!listEl) return;
+                const raw = localStorage.getItem('help_requests');
+                let arr = [];
+                try { arr = raw ? JSON.parse(raw) : []; } catch (e) { arr = []; }
+                if (!arr.length) {
+                    listEl.innerHTML = '<div class="text-gray-400">No previous requests.</div>';
+                    return;
+                }
+
+                // Render each request, its replies, and a reply form (hidden by default)
+                listEl.innerHTML = arr.map(r => {
+                    const repliesHtml = (r.replies || []).map(rep => {
+                        return `<div class="mt-2 p-2 bg-gray-900 rounded">` +
+                            `<div class="text-xs text-gray-300">${new Date(rep.timestamp).toLocaleString()} - <span class="font-semibold text-white">${escapeHtml(rep.by || 'Support')}</span></div>` +
+                            `<div class="mt-1 text-sm text-gray-200">${escapeHtml(rep.message)}</div>` +
+                        `</div>`;
+                    }).join('');
+
+                    return `<div class="mb-3 p-3 bg-gray-800 rounded">` +
+                        `<div class="flex items-center justify-between">` +
+                            `<div>` +
+                                `<div class="text-sm font-semibold text-white">${escapeHtml(r.subject || '(no subject)')}</div>` +
+                                `<div class="text-xs text-gray-300">${new Date(r.timestamp).toLocaleString()}</div>` +
+                            `</div>` +
+                            `<div>` +
+                                `<button class="text-xs text-blue-400 hover:underline" onclick="toggleReplyForm('${r.id}')">Reply</button>` +
+                            `</div>` +
+                        `</div>` +
+                        `<div class="mt-2 text-sm text-gray-200">${escapeHtml(r.message)}</div>` +
+                        `<div id="replies-${r.id}" class="mt-3">${repliesHtml}</div>` +
+                        `<div id="replyForm-${r.id}" class="mt-3 hidden">` +
+                            `<textarea id="replyInput-${r.id}" class="w-full p-2 rounded bg-gray-700 text-white border border-gray-600" rows="3" placeholder="Write a reply..."></textarea>` +
+                            `<div class="mt-2 flex items-center gap-2">` +
+                                `<button onclick="submitReply('${r.id}')" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm">Send Reply</button>` +
+                                `<button onclick="toggleReplyForm('${r.id}')" class="text-gray-300 px-2 py-1 rounded hover:underline text-sm">Cancel</button>` +
+                                `<span id="replySending-${r.id}" class="text-sm text-gray-300 hidden">Sending…</span>` +
+                            `</div>` +
+                        `</div>` +
+                    `</div>`;
+                }).join('');
+            }
+
+            // --- ALERTS HANDLERS ---
+            function openAlerts() {
+                const modal = document.getElementById('alertsModal');
+                if (modal) modal.classList.remove('hidden');
+                loadAlerts();
+            }
+
+            function closeAlerts() {
+                const modal = document.getElementById('alertsModal');
+                if (modal) modal.classList.add('hidden');
+            }
+
+            function loadAlerts() {
+                const listEl = document.getElementById('alertsList');
+                if (!listEl) return;
+                const raw = localStorage.getItem('price_alerts');
+                let arr = [];
+                try { arr = raw ? JSON.parse(raw) : []; } catch (e) { arr = []; }
+                if (!arr.length) {
+                    listEl.innerHTML = '<div class="text-gray-400">No tracked alerts.</div>';
+                    return;
+                }
+                listEl.innerHTML = arr.map(a => {
+                    return `<div class="mb-2 p-2 bg-gray-900 rounded flex items-center justify-between">` +
+                        `<div class="truncate"><div class="text-sm font-semibold text-white">${escapeHtml(a.product)}</div>` +
+                        `<div class="text-xs text-gray-300">${escapeHtml(a.retailer)} • Tracked at ${CURRENCY_SYMBOL}${Math.round(a.target)}</div></div>` +
+                        `<div class="ml-4 flex items-center gap-2">` +
+                            `<button onclick="removeAlert('${a.id}')" class="text-sm btn-ghost text-gray-300 px-2 py-1 rounded">Remove</button>` +
+                        `</div>` +
+                    `</div>`;
+                }).join('');
+            }
+
+            function toggleTrackAlert(product, retailer, price) {
+                try {
+                    const raw = localStorage.getItem('price_alerts');
+                    const arr = raw ? JSON.parse(raw) : [];
+                    // Avoid duplicates (product+retailer)
+                    const exists = arr.find(a => a.product === product && a.retailer === retailer);
+                    if (exists) {
+                        showMessage('This product is already being tracked for that retailer.', 'info');
+                        return;
+                    }
+                    const entry = { id: String(Date.now()), product: product, retailer: retailer, target: Math.round(price), created: new Date().toISOString() };
+                    arr.unshift(entry);
+                    localStorage.setItem('price_alerts', JSON.stringify(arr.slice(0, 200)));
+                    showMessage('Price tracking enabled for this retailer.', 'success');
+                    // If alerts modal is open, refresh list
+                    const modal = document.getElementById('alertsModal');
+                    if (modal && !modal.classList.contains('hidden')) loadAlerts();
+                } catch (e) {
+                    console.error('Failed to save alert', e);
+                    showMessage('Failed to enable tracking.', 'error');
+                }
+            }
+
+            function removeAlert(id) {
+                try {
+                    const raw = localStorage.getItem('price_alerts');
+                    const arr = raw ? JSON.parse(raw) : [];
+                    const filtered = arr.filter(a => String(a.id) !== String(id));
+                    localStorage.setItem('price_alerts', JSON.stringify(filtered));
+                    showMessage('Alert removed.', 'info');
+                    loadAlerts();
+                } catch (e) {
+                    console.error('Failed to remove alert', e);
+                    showMessage('Failed to remove alert.', 'error');
+                }
+            }
+
+            function clearAlerts() {
+                if (!confirm('Clear all tracked alerts?')) return;
+                localStorage.removeItem('price_alerts');
+                showMessage('All alerts cleared.', 'info');
+                loadAlerts();
+            }
+
+            // --- CART HANDLERS ---
+            function openCart() {
+                const modal = document.getElementById('cartModal');
+                if (modal) modal.classList.remove('hidden');
+                loadCart();
+            }
+
+            function closeCart() {
+                const modal = document.getElementById('cartModal');
+                if (modal) modal.classList.add('hidden');
+            }
+
+            function loadCart() {
+                const listEl = document.getElementById('cartList');
+                const countEl = document.getElementById('cartCount');
+                const totalEl = document.getElementById('cartTotal');
+                if (!listEl) return;
+                const raw = localStorage.getItem('finder_cart');
+                let arr = [];
+                try { arr = raw ? JSON.parse(raw) : []; } catch (e) { arr = []; }
+                if (!arr.length) {
+                    listEl.innerHTML = '<div class="text-gray-600">Your cart is empty.</div>';
+                    if (countEl) countEl.textContent = '0';
+                    if (totalEl) totalEl.textContent = '₹0';
+                    return;
+                }
+                let total = 0;
+                listEl.innerHTML = arr.map(item => {
+                    total += Number(item.price || 0);
+                    return `<div class="mb-2 p-2 bg-gray-50 rounded flex items-center justify-between">` +
+                        `<div class="truncate"><div class="text-sm font-semibold text-gray-900">${escapeHtml(item.product)}</div>` +
+                        `<div class="text-xs text-gray-600">${escapeHtml(item.retailer)} • ${CURRENCY_SYMBOL}${Math.round(item.price)}</div></div>` +
+                        `<div class="ml-4 flex items-center gap-2">` +
+                            `<a href="${item.link}" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-600 underline">Open</a>` +
+                            `<button onclick="removeCartItem('${item.id}')" class="text-sm btn-ghost text-gray-600 px-2 py-1 rounded">Remove</button>` +
+                        `</div>` +
+                    `</div>`;
+                }).join('');
+                if (countEl) countEl.textContent = String(arr.length);
+                if (totalEl) totalEl.textContent = `${CURRENCY_SYMBOL}${Math.round(total)}`;
+            }
+
+            function addToCart(product, retailer, price, link) {
+                try {
+                    const raw = localStorage.getItem('finder_cart');
+                    const arr = raw ? JSON.parse(raw) : [];
+                    const entry = { id: String(Date.now()), product: product, retailer: retailer, price: Math.round(Number(price) || 0), link: link };
+                    arr.unshift(entry);
+                    localStorage.setItem('finder_cart', JSON.stringify(arr.slice(0, 200)));
+                    showMessage('Added to cart.', 'success');
+                    const countEl = document.getElementById('cartCount');
+                    if (countEl) countEl.textContent = String(arr.length);
+                } catch (e) {
+                    console.error('Failed to add to cart', e);
+                    showMessage('Failed to add to cart.', 'error');
+                }
+            }
+
+            function removeCartItem(id) {
+                try {
+                    const raw = localStorage.getItem('finder_cart');
+                    const arr = raw ? JSON.parse(raw) : [];
+                    const filtered = arr.filter(c => String(c.id) !== String(id));
+                    localStorage.setItem('finder_cart', JSON.stringify(filtered));
+                    showMessage('Item removed from cart.', 'info');
+                    loadCart();
+                } catch (e) {
+                    console.error('Failed to remove cart item', e);
+                    showMessage('Failed to remove item.', 'error');
+                }
+            }
+
+            function clearCart() {
+                if (!confirm('Clear all items from cart?')) return;
+                localStorage.removeItem('finder_cart');
+                showMessage('Cart cleared.', 'info');
+                loadCart();
+            }
+
+            function checkoutCart() {
+                const raw = localStorage.getItem('finder_cart');
+                let arr = [];
+                try { arr = raw ? JSON.parse(raw) : []; } catch (e) { arr = []; }
+                if (!arr.length) { showMessage('Cart is empty.', 'info'); return; }
+                // Simulate checkout flow
+                localStorage.removeItem('finder_cart');
+                showMessage('Checkout complete (simulated). Thank you!', 'success');
+                loadCart();
+            }
+
+            // Toggle the inline reply form for a given request id
+            function toggleReplyForm(id) {
+                const form = document.getElementById(`replyForm-${id}`);
+                if (!form) return;
+                form.classList.toggle('hidden');
+            }
+
+            // Submit a reply for a given help request id. Stores locally and attempts Firestore subcollection write.
+            async function submitReply(id) {
+                const input = document.getElementById(`replyInput-${id}`);
+                if (!input) return;
+                const text = input.value.trim();
+                if (!text) { showMessage('Please enter a reply message.', 'error'); return; }
+
+                const sendIndicator = document.getElementById(`replySending-${id}`);
+                if (sendIndicator) sendIndicator.classList.remove('hidden');
+
+                const byUser = (JSON.parse(localStorage.getItem(SESSION_KEY) || 'null') || {}).id || 'User';
+                const replyObj = { id: String(Date.now()), message: text, timestamp: new Date().toISOString(), by: byUser };
+
+                let savedLocally = false;
+                try {
+                    const raw = localStorage.getItem('help_requests');
+                    const arr = raw ? JSON.parse(raw) : [];
+                    const idx = arr.findIndex(r => String(r.id) === String(id));
+                    if (idx !== -1) {
+                        arr[idx].replies = arr[idx].replies || [];
+                        arr[idx].replies.push(replyObj);
+                        localStorage.setItem('help_requests', JSON.stringify(arr.slice(0, 200)));
+                        savedLocally = true;
+                    } else {
+                        // If not found locally, still save as a new local record so replies are not lost
+                        arr.unshift({ id: String(id), subject: '(unknown)', message: '(original not found locally)', timestamp: new Date().toISOString(), user: null, replies: [replyObj] });
+                        localStorage.setItem('help_requests', JSON.stringify(arr.slice(0, 200)));
+                        savedLocally = true;
+                    }
+                } catch (e) {
+                    console.error('Saving reply locally failed', e);
+                }
+
+                // Try to save reply in Firestore subcollection if available
+                if (typeof db !== 'undefined' && db) {
+                    try {
+                        // Add to subcollection: help_requests/{docId}/replies
+                        await addDoc(collection(db, 'help_requests', String(id), 'replies'), replyObj);
+                        showMessage('Reply submitted to server.', 'success');
+                    } catch (err) {
+                        console.warn('Firestore reply submit failed, saved locally instead:', err);
+                        if (savedLocally) showMessage('Reply saved locally (offline).', 'info');
+                    }
+                } else {
+                    if (savedLocally) showMessage('Reply saved locally (offline).', 'info');
+                }
+
+                if (sendIndicator) sendIndicator.classList.add('hidden');
+                input.value = '';
+                toggleReplyForm(id);
+                loadHelpRequests();
+            }
+
+            function escapeHtml(str) {
+                if (!str) return '';
+                return String(str).replace(/[&<>"'`]/g, function (s) {
+                    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;', '`':'&#96;'})[s];
+                });
+            }
+
+            async function submitHelpRequest() {
+                const subject = (document.getElementById('helpSubject') || {}).value || '';
+                const message = (document.getElementById('helpMessage') || {}).value || '';
+                if (!subject.trim() || !message.trim()) { showMessage('Please provide a subject and description.', 'error'); return; }
+
+                const submitBtn = document.getElementById('helpSubmitBtn');
+                const sending = document.getElementById('helpSending');
+                if (submitBtn) submitBtn.disabled = true;
+                if (sending) sending.classList.remove('hidden');
+
+                // include an id so replies are associated and an empty replies array
+                const payload = { id: String(Date.now()), subject: subject.trim(), message: message.trim(), timestamp: new Date().toISOString(), user: (JSON.parse(localStorage.getItem(SESSION_KEY) || 'null') || {}).id || null, replies: [] };
+
+                // Try to send to Firestore when available, otherwise fallback to localStorage
+                let savedLocally = false;
+                if (typeof db !== 'undefined' && db) {
+                    try {
+                        await addDoc(collection(db, 'help_requests'), payload);
+                        showMessage('Help request submitted. We will get back to you shortly.', 'success');
+                    } catch (err) {
+                        console.warn('Firestore submit failed, saving locally:', err);
+                        savedLocally = true;
+                    }
+                } else {
+                    savedLocally = true;
+                }
+
+                if (savedLocally) {
+                    try {
+                        const raw = localStorage.getItem('help_requests');
+                        const arr = raw ? JSON.parse(raw) : [];
+                        arr.unshift(payload);
+                        localStorage.setItem('help_requests', JSON.stringify(arr.slice(0, 200)));
+                        showMessage('Saved help request locally (offline).', 'info');
+                    } catch (e) {
+                        console.error('Saving help request locally failed', e);
+                        showMessage('Failed to save request. Check console.', 'error');
+                    }
+                }
+
+                if (submitBtn) submitBtn.disabled = false;
+                if (sending) sending.classList.add('hidden');
+                document.getElementById('helpSubject').value = '';
+                document.getElementById('helpMessage').value = '';
+                loadHelpRequests();
+            }
+
+            // --- HISTORY, FAVORITES, CHAT, REVIEWS, THEME HANDLERS ---
+            let currentlyViewedProduct = null;
+
+            function recordSearch(product) {
+                if (!product) return;
+                try {
+                    const raw = localStorage.getItem('search_history');
+                    const arr = raw ? JSON.parse(raw) : [];
+                    arr.unshift({ q: product, ts: Date.now() });
+                    // keep last 200
+                    localStorage.setItem('search_history', JSON.stringify(arr.slice(0, 200)));
+                } catch (e) { console.warn('recordSearch failed', e); }
+            }
+
+            function openHistory() { const m = document.getElementById('historyModal'); if (m) m.classList.remove('hidden'); loadHistory(); }
+            function closeHistory() { const m = document.getElementById('historyModal'); if (m) m.classList.add('hidden'); }
+            function clearHistory() { if (!confirm('Clear search history?')) return; localStorage.removeItem('search_history'); loadHistory(); }
+            function loadHistory() {
+                const listEl = document.getElementById('historyList'); if (!listEl) return;
+                const raw = localStorage.getItem('search_history'); let arr = [];
+                try { arr = raw ? JSON.parse(raw) : []; } catch (e) { arr = []; }
+                if (!arr.length) { listEl.innerHTML = '<div class="text-gray-400">No history yet.</div>'; return; }
+                listEl.innerHTML = arr.map(h => {
+                    const q = JSON.stringify(h.q);
+                    return `<div class="mb-2 p-2 bg-gray-900 rounded flex items-center justify-between">` +
+                        `<div class="truncate"><div class="text-sm text-white">${escapeHtml(h.q)}</div><div class="text-xs text-gray-300">${new Date(h.ts).toLocaleString()}</div></div>` +
+                        `<div><button onclick='(function(){ document.getElementById("productInput").value = ${q}; document.getElementById("searchButton").disabled = false; searchProduct(); })()' class="text-sm btn-ghost text-gray-300 px-2 py-1 rounded">Re-run</button></div>` +
+                    `</div>`;
+                }).join('');
+            }
+
+            // FAVORITES
+            function openFavorites() { const m = document.getElementById('favoritesModal'); if (m) m.classList.remove('hidden'); loadFavorites(); }
+            function closeFavorites() { const m = document.getElementById('favoritesModal'); if (m) m.classList.add('hidden'); }
+            function loadFavorites() {
+                const listEl = document.getElementById('favoritesList'); if (!listEl) return;
+                const raw = localStorage.getItem('fav_products'); let arr = [];
+                try { arr = raw ? JSON.parse(raw) : []; } catch (e) { arr = []; }
+                if (!arr.length) { listEl.innerHTML = '<div class="text-gray-400">No favorites yet.</div>'; return; }
+                listEl.innerHTML = arr.map(f => `<div class="mb-2 p-2 bg-gray-900 rounded flex items-center justify-between"><div class="truncate"><div class="text-sm font-semibold text-white">${escapeHtml(f.product)}</div><div class="text-xs text-gray-300">${escapeHtml(f.retailer)} • ${CURRENCY_SYMBOL}${Math.round(f.price)}</div></div><div class="ml-4 flex items-center gap-2"><a href="${f.link}" target="_blank" class="text-sm text-blue-400 underline">Open</a><button onclick="removeFavorite('${f.id}')" class="text-sm btn-ghost text-gray-300 px-2 py-1 rounded">Remove</button></div></div>`).join('');
+            }
+            function toggleFavorite(product, retailer, price, link) {
+                try {
+                    const raw = localStorage.getItem('fav_products'); const arr = raw ? JSON.parse(raw) : [];
+                    const exists = arr.find(x => x.product === product && x.retailer === retailer && Number(x.price) === Number(price));
+                    if (exists) {
+                        // remove
+                        const filtered = arr.filter(x => !(x.product === product && x.retailer === retailer && Number(x.price) === Number(price)));
+                        localStorage.setItem('fav_products', JSON.stringify(filtered));
+                        showMessage('Removed from favorites.', 'info');
+                    } else {
+                        const entry = { id: String(Date.now()), product, retailer, price: Math.round(Number(price) || 0), link };
+                        arr.unshift(entry);
+                        localStorage.setItem('fav_products', JSON.stringify(arr.slice(0, 200)));
+                        showMessage('Added to favorites.', 'success');
+                    }
+                } catch (e) { console.error('toggleFavorite failed', e); showMessage('Favorite action failed.', 'error'); }
+            }
+            function removeFavorite(id) { try { const raw = localStorage.getItem('fav_products'); const arr = raw ? JSON.parse(raw) : []; const filtered = arr.filter(x => String(x.id) !== String(id)); localStorage.setItem('fav_products', JSON.stringify(filtered)); loadFavorites(); showMessage('Favorite removed.', 'info'); } catch (e) { console.error(e); } }
+
+            // CHAT BOT (simple local simulator)
+            function openChat() { const m = document.getElementById('chatModal'); if (m) m.classList.remove('hidden'); const w = document.getElementById('chatWindow'); if (w) w.innerHTML = '<div class="text-gray-400">Hi! I can help with product comparisons, explain features, or suggest search tips.</div>'; }
+            function closeChat() { const m = document.getElementById('chatModal'); if (m) m.classList.add('hidden'); }
+            function sendChatMessage() {
+                const input = document.getElementById('chatInput'); const windowEl = document.getElementById('chatWindow'); if (!input || !windowEl) return; const text = input.value.trim(); if (!text) return; const userHtml = `<div class="mb-2 text-sm text-white p-2 bg-blue-700 rounded">You: ${escapeHtml(text)}</div>`; windowEl.innerHTML += userHtml; input.value = '';
+                // Simulate a reply
+                setTimeout(() => {
+                    const reply = generateBotReply(text);
+                    windowEl.innerHTML += `<div class="mb-2 text-sm text-gray-200 p-2 bg-gray-900 rounded">Assistant: ${escapeHtml(reply)}</div>`;
+                    windowEl.scrollTop = windowEl.scrollHeight;
+                }, 700);
+            }
+            function generateBotReply(msg) {
+                const m = msg.toLowerCase();
+                if (m.includes('best') || m.includes('cheapest')) return 'Try searching the exact model name — that usually returns the best price comparisons.';
+                if (m.includes('cart')) return 'Use the Add to Cart buttons in each row to save items locally and open Cart from the header.';
+                if (m.includes('alerts') || m.includes('track')) return 'Use Track Price next to a result to save an alert locally.';
+                return 'I can help with searches, favorites, reviews, and alerts. Try: "How to add to cart"';
+            }
+
+            // --- LIGHTWEIGHT REVIEWS (modal + storage) ---
+            function openReviewModal() {
+                const modal = document.getElementById('reviewModal');
+                if (!modal) return;
+                // if there's a currently viewed product, prefill
+                const prod = (currentlyViewedProduct || '').trim();
+                if (prod) (document.getElementById('reviewProduct') || {}).value = prod;
+                modal.classList.remove('hidden');
+                document.getElementById('reviewText')?.focus();
+            }
+
+            function closeReviewModal() {
+                const modal = document.getElementById('reviewModal');
+                if (!modal) return;
+                modal.classList.add('hidden');
+            }
+
+            function submitReview() {
+                const prodInput = document.getElementById('reviewProduct');
+                const ratingEl = document.getElementById('reviewRating');
+                const textEl = document.getElementById('reviewText');
+                const product = (prodInput && prodInput.value.trim()) || currentlyViewedProduct || 'General';
+                const rating = Number((ratingEl || {}).value || 5);
+                const text = (textEl || {}).value || '';
+                if (!text.trim()) { showMessage('Please enter a review message.', 'error'); return; }
+
+                try {
+                    const raw = localStorage.getItem('product_reviews');
+                    const all = raw ? JSON.parse(raw) : {};
+                    all[product] = all[product] || [];
+                    all[product].unshift({ ts: Date.now(), user: (JSON.parse(localStorage.getItem(SESSION_KEY)||'null')||{}).id || 'Anonymous', rating, text });
+                    localStorage.setItem('product_reviews', JSON.stringify(all));
+                    showMessage('Review saved locally.', 'success');
+                    // clear inputs
+                    if (textEl) textEl.value = '';
+                    closeReviewModal();
+                } catch (e) {
+                    console.error('submitReview failed', e);
+                    showMessage('Failed to save review.', 'error');
+                }
+            }
+
+            function viewReviews(product) {
+                const listEl = document.getElementById('reviewModalList');
+                if (!listEl) return;
+                const p = (product || '').trim();
+                if (!p) { listEl.innerHTML = '<div class="text-gray-400">Enter a product name to view reviews.</div>'; return; }
+                const raw = localStorage.getItem('product_reviews');
+                const all = raw ? JSON.parse(raw) : {};
+                const arr = all[p] || [];
+                if (!arr.length) { listEl.innerHTML = '<div class="text-gray-400">No reviews yet.</div>'; return; }
+                listEl.innerHTML = arr.map(r => `<div class="mb-2 p-2 bg-gray-900 rounded"><div class="text-xs text-gray-300">${new Date(r.ts).toLocaleString()} • <strong class="text-white">${escapeHtml(r.user||'Anonymous')}</strong> • ${'⭐'.repeat(r.rating)}</div><div class="mt-1 text-sm text-gray-200">${escapeHtml(r.text)}</div></div>`).join('');
+            }
+
+            // REVIEWS (local)
+            function loadReviews(product) {
+                currentlyViewedProduct = product;
+                const container = document.getElementById('reviewsContainer'); const title = document.getElementById('reviewsTitle'); const list = document.getElementById('reviewsList');
+                if (!container || !title || !list) return;
+                title.textContent = `Customer Reviews for "${product}"`;
+                container.classList.remove('hidden');
+                try {
+                    const raw = localStorage.getItem('product_reviews'); const all = raw ? JSON.parse(raw) : {};
+                    const arr = all[product] || [];
+                    if (!arr.length) { list.innerHTML = '<div class="text-gray-400">No reviews yet.</div>'; return; }
+                    list.innerHTML = arr.map(r => `<div class="mb-2 p-2 bg-gray-900 rounded"><div class="text-xs text-gray-300">${new Date(r.ts).toLocaleString()} • <strong class="text-white">${escapeHtml(r.user||'Anonymous')}</strong> • ${'⭐'.repeat(r.rating)}</div><div class="mt-1 text-sm text-gray-200">${escapeHtml(r.text)}</div></div>`).join('');
+                } catch (e) { console.error('loadReviews failed', e); list.innerHTML = '<div class="text-gray-400">Unable to load reviews.</div>'; }
+            }
+            // Reviews removed — functions deleted
+
+            // THEME TOGGLE
+            function toggleDarkMode() {
+                const isDark = document.documentElement.classList.toggle('finder-dark');
+                // persist
+                localStorage.setItem('finder_theme_dark', isDark ? '1' : '0');
+                // quick CSS adjustments
+                if (isDark) {
+                    document.documentElement.style.setProperty('--bg-1', '#0b1220');
+                    document.documentElement.style.setProperty('--bg-2', '#071029');
+                    document.documentElement.style.setProperty('--card', '#071129');
+                    document.documentElement.style.setProperty('--text', '#e6eef8');
+                    document.documentElement.style.setProperty('--muted-text', '#9fb0c8');
+                } else {
+                    document.documentElement.style.setProperty('--bg-1', '#ffffff');
+                    document.documentElement.style.setProperty('--bg-2', '#f8fafc');
+                    document.documentElement.style.setProperty('--card', '#ffffff');
+                    document.documentElement.style.setProperty('--text', '#0b1220');
+                    document.documentElement.style.setProperty('--muted-text', '#475569');
+                }
+            }
+
+            // restore theme on load
+            try { if (localStorage.getItem('finder_theme_dark') === '1') toggleDarkMode(); } catch (e) {}
+
+            // expose help, alerts, cart, history, favorites, chat, review and theme functions globally (module scope -> inline handlers)
+            window.openHelp = openHelp; window.closeHelp = closeHelp; window.submitHelpRequest = submitHelpRequest;
+            window.toggleReplyForm = toggleReplyForm; window.submitReply = submitReply;
+            window.openAlerts = openAlerts; window.closeAlerts = closeAlerts; window.toggleTrackAlert = toggleTrackAlert; window.removeAlert = removeAlert; window.clearAlerts = clearAlerts;
+            window.openCart = openCart; window.closeCart = closeCart; window.addToCart = addToCart; window.removeCartItem = removeCartItem; window.clearCart = clearCart; window.checkoutCart = checkoutCart;
+            window.openHistory = openHistory; window.closeHistory = closeHistory; window.loadHistory = loadHistory; window.clearHistory = clearHistory;
+            window.openFavorites = openFavorites; window.closeFavorites = closeFavorites; window.toggleFavorite = toggleFavorite; window.removeFavorite = removeFavorite; window.loadFavorites = loadFavorites;
+            window.openChat = openChat; window.closeChat = closeChat; window.sendChatMessage = sendChatMessage;
+            window.openReviewModal = openReviewModal; window.closeReviewModal = closeReviewModal; window.submitReview = submitReview; window.viewReviews = viewReviews; window.toggleDarkMode = toggleDarkMode;
+            window.buildRetailerLinks = buildRetailerLinks; window.openRetailerLink = openRetailerLink; window.copyRetailerLink = copyRetailerLink; window.fetchGoogleSearch = fetchGoogleSearch;
+
+
+        // --- AUTHENTICATION AND INITIALIZATION ---
+        
+        /**
+         * Initiates the Firebase login process automatically on load.
+         */
+        async function initializeAuthAndApp() {
+            if (!auth) {
+                showMessage("Authentication service failed to load. Check Firebase configuration.", 'error');
+                return;
+            }
+
+            console.log("Attempting automatic Firebase Sign-in...");
+
+            try {
+                // Use custom token if available, otherwise sign in anonymously
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                    console.log("Signed in with custom token.");
+                } else {
+                    await signInAnonymously(auth);
+                    console.log("Signed in anonymously.");
+                }
+                // The onAuthStateChanged listener handles the final UI update on success
+
+            } catch (error) {
+                console.error("Firebase Authentication Error on Load:", error);
+                showMessage(`Automatic background connection failed: ${error.message}`, 'error'); 
+            }
+        };
+
+        // Auth state listener: Runs immediately on load and after every sign-in/out
+        if (auth) {
+            onAuthStateChanged(auth, (user) => {
+                console.log("Auth State Changed. User object:", user ? 'present' : 'null');
+                if (user) {
+                    currentUserId = user.uid;
+                    showMessage("Connected to service in the background.", 'success');
+                } else {
+                    currentUserId = null;
+                }
+            });
+        } else {
+            console.warn("Firebase auth not initialized; skipping auth state listener.");
+        }
+
+        // Start the application initialization on load
+        // Initialize Firebase auth in background (if configured) but only after login UI decision
+        if (isAuthenticated()) {
+            initializeAuthAndApp();
+        }
+
+        // Expose functions globally for HTML event handlers (like onclick)
+        window.showMessage = showMessage;
+        window.searchProduct = searchProduct;
+        
+    </script>
+</body>
+</html> 
